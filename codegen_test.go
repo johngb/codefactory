@@ -160,3 +160,70 @@ func TestSetCustom(t *testing.T) {
 		})
 	}
 }
+
+func TestSetFormat(t *testing.T) {
+	var testCases = []struct {
+		desc       string
+		input      string
+		input2     string
+		wantFormat string
+		wantErr    error
+	}{
+		{
+			desc:       "valid format set",
+			input:      "#xxxx",
+			wantFormat: "#xxxx",
+			wantErr:    nil,
+		},
+		{
+			desc:       "input has inivalid whitespace",
+			input:      "\t\n #xxxx",
+			wantFormat: defaultFormat,
+			wantErr:    errInvalidFormat,
+		},
+		{
+			desc:       "has numbers",
+			input:      "#xxx2a",
+			wantFormat: defaultFormat,
+			wantErr:    errInvalidFormat,
+		},
+		{
+			desc:       "successive sets",
+			input:      "#aaaa",
+			input2:     "#xxxa",
+			wantFormat: "#xxxa",
+			wantErr:    nil,
+		},
+		{
+			desc:       "invalid letters used",
+			input:      "#afaa",
+			wantFormat: defaultFormat,
+			wantErr:    errInvalidFormat,
+		},
+		{
+			desc:       "uppercase letters used",
+			input:      "#aAaa",
+			wantFormat: defaultFormat,
+			wantErr:    errInvalidFormat,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			err := cf.SetFormat(tt.input)
+
+			if tt.input2 != "" {
+				err = cf.SetFormat(tt.input2)
+			}
+
+			So(cf.format, ShouldResemble, tt.wantFormat)
+			So(cf.upper, ShouldResemble, defaultUppercase)
+			So(cf.lower, ShouldResemble, defaultLowercase)
+			So(cf.custom, ShouldResemble, "")
+			So(cf.num, ShouldResemble, defaultNumbers)
+			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}

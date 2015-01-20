@@ -12,6 +12,10 @@ const (
 	defaultLowercase = "abcdefghijklmnopqrstuvwxyz"
 	defaultUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	defaultFormat    = "#aaaa"
+	defaultCustom    = ""
+	defaultPrefix    = ""
+	defaultSuffix    = ""
+	validFormatChars = "xdlua"
 )
 
 var (
@@ -40,9 +44,9 @@ func New() *CodeFactory {
 		num:    defaultNumbers,
 		lower:  defaultLowercase,
 		upper:  defaultUppercase,
-		custom: "",
-		prefix: "",
-		suffix: "",
+		custom: defaultCustom,
+		prefix: defaultPrefix,
+		suffix: defaultSuffix,
 		format: defaultFormat,
 	}
 }
@@ -82,9 +86,15 @@ func (c *CodeFactory) SetCustom(s string) error {
 func (c *CodeFactory) SetFormat(s string) error {
 	for _, v := range s {
 		// if not punctuation, symbol, or space
-		if !unicode.IsPunct(v) && !unicode.IsSymbol(v) && v != ' ' {
+		if !unicode.IsPunct(v) && !unicode.IsSymbol(v) && v != ' ' && !unicode.IsLetter(v) {
 			return errInvalidFormat
 		}
+		if unicode.IsLetter(v) {
+			if !isIncludedIn(validFormatChars, v) {
+				return errInvalidFormat
+			}
+		}
+
 	}
 	c.format = s
 	return nil
@@ -248,4 +258,13 @@ func allLatin1(s string) bool {
 		}
 	}
 	return true
+}
+
+func isIncludedIn(s string, v rune) bool {
+	for _, n := range s {
+		if v == n {
+			return true
+		}
+	}
+	return false
 }
