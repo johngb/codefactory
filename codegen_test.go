@@ -1,58 +1,162 @@
 package codegen
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestExclude(t *testing.T) {
-	var testCases = []struct {
-	description string
-	input       string
-	wantNum     string
-	wantLower   string
-	wantUpper   string
-	wantErr     bool
-}{
-	{"1aZ", "023456789", "bcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", false},
-}
-	Convey("Test Exclude", t, func() {
-		for _, test := range testCases {
-			Convey(test.description, func() {
+func TestNew(t *testing.T) {
 
-			cf := New()
-			cf.Exclude(test.input)
-			So(cf.num, ShouldResemble, test.wantNum)
-			So(cf.lower, ShouldResemble, test.wantLower)
-			So(cf.upper, ShouldResemble, test.wantUpper)
+	Convey("Create default new CodeFactory", t, func() {
 
-			if actual != test.expected {
-				t.Fatalf("")
-			}
-
-			// if we expect an error and there isn't one
-			if test.expectErr && err == nil {
-				t.Errorf("Name(%v): expected an error, but error is nil", test.input)
-			}
-			// if we don't expect an error and there is one
-			if !test.expectErr && err != nil {
-				t.Errorf("Name(%v): expected no error, but error is %s", test.input, err)
-			}
+		wantCF := &CodeFactory{
+			num:    "0123456789",
+			lower:  "abcdefghijklmnopqrstuvwxyz",
+			upper:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			custom: "",
+			prefix: "",
+			suffix: "",
+			format: "#aaaa",
 		}
-		})
+		cf := New()
+
+		So(cf, ShouldResemble, wantCF)
 	})
 }
 
-// func BenchmarkXXX(b *testing.B) {
-// 	b.StopTimer()
-// 	for _, test := range testCases {
-// 		b.StartTimer()
+func TestReadable(t *testing.T) {
 
-// 		for i := 0; i < b.N; i++ {
-// 			XXX(test.input)
-// 		}
+	Convey("Create readable new CodeFactory", t, func() {
 
-// 		b.StopTimer()
-// 	}
-// }
+		wantCF := &CodeFactory{
+			num:    "0123456789",
+			lower:  "abcdefghijkmnopqrstuvwxyz",
+			upper:  "ABCDEFGHJKLMNPQRSTUVWXYZ",
+			custom: "",
+			prefix: "",
+			suffix: "",
+			format: "#aaaa",
+		}
+		cf := NewReadable()
+
+		So(cf, ShouldResemble, wantCF)
+	})
+}
+
+func TestExclude(t *testing.T) {
+	var testCases = []struct {
+		desc      string
+		input     string
+		wantNum   string
+		wantLower string
+		wantUpper string
+		wantErr   bool
+	}{
+		{
+			desc:      "basic exclude from each set",
+			input:     "1aZ",
+			wantNum:   "023456789",
+			wantLower: "bcdefghijklmnopqrstuvwxyz",
+			wantUpper: "ABCDEFGHIJKLMNOPQRSTUVWXY",
+			wantErr:   false,
+		},
+		{
+			desc:      "basic exclude full set",
+			input:     "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			wantNum:   "0123456789",
+			wantLower: "abcdefghijklmnopqrstuvwxyz",
+			wantUpper: "",
+			wantErr:   false,
+		},
+		{
+			desc:      "empty exclude",
+			input:     "",
+			wantNum:   "0123456789",
+			wantLower: "abcdefghijklmnopqrstuvwxyz",
+			wantUpper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			wantErr:   false,
+		},
+		{
+			desc:      "invalid exclude",
+			input:     "$*",
+			wantNum:   "0123456789",
+			wantLower: "abcdefghijklmnopqrstuvwxyz",
+			wantUpper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+			wantErr:   true,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			err := cf.Exclude(tt.input)
+
+			So(cf.num, ShouldResemble, tt.wantNum)
+			So(cf.upper, ShouldResemble, tt.wantUpper)
+			So(cf.lower, ShouldResemble, tt.wantLower)
+
+			if tt.wantErr {
+				So(err, ShouldNotBeNil)
+			} else {
+				So(err, ShouldBeNil)
+			}
+		})
+	}
+}
+
+func TestSetCustom(t *testing.T) {
+	var testCases = []struct {
+		desc       string
+		input      string
+		input2     string
+		wantCustom string
+		wantErr    error
+	}{
+		{
+			desc:       "valid custom set",
+			input:      "bc346NñŒ",
+			wantCustom: "bc346NñŒ",
+			wantErr:    nil,
+		},
+		{
+			desc:       "input has whitespace",
+			input:      " bc3 46NñŒ",
+			wantCustom: "",
+			wantErr:    errWhitespace,
+		},
+		{
+			desc:       "has duplicates",
+			input:      "bctevb32",
+			wantCustom: "",
+			wantErr:    errDuplicates,
+		},
+		{
+			desc:       "successive sets",
+			input:      "2345",
+			input2:     "abcd",
+			wantCustom: "abcd",
+			wantErr:    nil,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			err := cf.SetCustom(tt.input)
+
+			if tt.input2 != "" {
+				err = cf.SetCustom(tt.input2)
+			}
+
+			So(cf.custom, ShouldResemble, tt.wantCustom)
+			So(cf.upper, ShouldResemble, defaultUppercase)
+			So(cf.lower, ShouldResemble, defaultLowercase)
+			So(cf.num, ShouldResemble, defaultNumbers)
+			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}

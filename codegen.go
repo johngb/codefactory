@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	defaultnumbers   = "0123456789"
-	defaultlowercase = "abcdefghijklmnopqrstuvwxyz"
-	defaultuppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	defaultNumbers   = "0123456789"
+	defaultLowercase = "abcdefghijklmnopqrstuvwxyz"
+	defaultUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	defaultFormat    = "#aaaa"
 )
 
@@ -57,11 +57,11 @@ func (c *CodeFactory) Exclude(s string) error {
 	for _, v := range s {
 		switch {
 		case unicode.IsDigit(v):
-			c.num = strings.Trim(c.num, v)
+			c.num = strings.Replace(c.num, string(v), "", 1)
 		case unicode.IsLower(v):
-			c.lower = strings.Trim(c.lower, v)
+			c.lower = strings.Replace(c.lower, string(v), "", 1)
 		case unicode.IsUpper(v): // upper
-			c.upper = strings.Trim(c.upper, v)
+			c.upper = strings.Replace(c.upper, string(v), "", 1)
 		default:
 			return errNotLetterOrNumber
 		}
@@ -205,7 +205,7 @@ func (c *CodeFactory) MakeSingle() string {
 	return r
 }
 
-func hasWhiteSpace(s string) bool {
+func hasWhitespace(s string) bool {
 	for _, v := range s {
 		if unicode.IsSpace(rune(v)) {
 			return true
@@ -234,7 +234,7 @@ func allLower(s string) bool {
 
 func hasDuplicates(s string) bool {
 	for _, v := range s {
-		if strings.Count(s, v) != 1 {
+		if strings.Count(s, string(v)) != 1 {
 			return true
 		}
 	}
