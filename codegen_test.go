@@ -365,7 +365,106 @@ func TestMaxCodes(t *testing.T) {
 			cf := New()
 			cf.SetFormat(tt.format)
 
-			So(cf.maxCodes(), ShouldEqual, tt.wantNumber)
+			So(cf.MaxCodes(), ShouldEqual, tt.wantNumber)
 		})
 	}
+}
+
+func TestGenerate(t *testing.T) {
+
+	Convey("testing with '#xxxx'", t, func() {
+
+		cf := New()
+		cf.SetFormat("#xxxx")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.num+cf.upper+cf.lower), rune(res[0][1])), ShouldBeTrue)
+		So(isIncludedIn((cf.num+cf.upper+cf.lower), rune(res[0][2])), ShouldBeTrue)
+		So(isIncludedIn((cf.num+cf.upper+cf.lower), rune(res[0][3])), ShouldBeTrue)
+		So(isIncludedIn((cf.num+cf.upper+cf.lower), rune(res[0][4])), ShouldBeTrue)
+
+	})
+
+	Convey("testing with '# d'", t, func() {
+
+		cf := New()
+		cf.SetFormat("# d")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.num), rune(res[0][2])), ShouldBeTrue)
+	})
+
+	Convey("testing with '$ l'", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ l")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.lower), rune(res[0][2])), ShouldBeTrue)
+	})
+
+	Convey("testing with '$ u'", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ u")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.upper), rune(res[0][2])), ShouldBeTrue)
+	})
+
+	Convey("testing with '$ a'", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ a")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.upper+cf.lower), rune(res[0][2])), ShouldBeTrue)
+	})
+
+	Convey("testing with a hopeful code collision", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ dd")
+		numcodes := 20
+
+		res, err := cf.Generate(numcodes)
+
+		So(err, ShouldBeNil)
+		So(len(res), ShouldEqual, numcodes)
+	})
+
+	Convey("testing with a too many code collisions", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ dd")
+		numcodes := 90
+
+		res, err := cf.Generate(numcodes)
+
+		So(err, ShouldEqual, errMaxRetriesExceeded)
+		So(len(res), ShouldEqual, 0)
+	})
+
+	Convey("testing with a too many codes requested", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ d")
+		numcodes := 20
+
+		res, err := cf.Generate(numcodes)
+
+		So(err, ShouldEqual, errTooManyCodes)
+		So(len(res), ShouldEqual, 0)
+	})
+
 }

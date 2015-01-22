@@ -32,6 +32,7 @@ var (
 	errNotLetter          = errors.New("not a letter")
 	errNotLatin1          = errors.New("can only extend with Latin1 letters and digits")
 	errMaxRetriesExceeded = errors.New("too many duplicate codes generated. Consider using a longer code")
+	errTooManyCodes       = errors.New("too many codes to generate with given settings")
 )
 
 type CodeFactory struct {
@@ -144,7 +145,7 @@ func (c *CodeFactory) ExtendLetters(s string) error {
 	return nil
 }
 
-func (c *CodeFactory) maxCodes() int64 {
+func (c *CodeFactory) MaxCodes() int64 {
 
 	// lengths for optimisation
 	lenX := int64(len(c.num + c.upper + c.lower))
@@ -168,8 +169,8 @@ func (c *CodeFactory) maxCodes() int64 {
 				max *= lenU
 			case 'a':
 				max *= lenA
-			default:
-				panic("Invalid format was passed.  Format code possibly broken.")
+				// default:
+				// 	panic("Invalid format was passed.  Format code possibly broken.")
 			}
 		}
 		if max > maxNumCodes*10 { // ten times the max number of codes to be sure that we can easily generate the given number
@@ -184,6 +185,10 @@ func (c *CodeFactory) maxCodes() int64 {
 }
 
 func (c *CodeFactory) Generate(num int) ([]string, error) {
+
+	if int64(num) > c.MaxCodes() {
+		return []string{}, errTooManyCodes
+	}
 
 	// strings to build codes from
 	x := c.num + c.upper + c.lower
@@ -237,15 +242,15 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 			case 'a':
 				r += string(a[rand.Intn(lenA)])
 
-			default:
-				panic("John broke the code! Format should not have passed validation")
-				return []string{}, errInvalidFormat
+				// default:
+				// 	panic("John broke the code! Format should not have passed validation")
+				// 	return []string{}, errInvalidFormat
 			}
 
 		}
 		r += c.suffix
 
-		// chcek if r is in res
+		// check if r is in res
 		if exist := isInSlice(res, r); exist {
 			i-- // generate a new code
 			retries++
