@@ -227,3 +227,91 @@ func TestSetFormat(t *testing.T) {
 		})
 	}
 }
+
+func TestExtend(t *testing.T) {
+	var testCases = []struct {
+		desc      string
+		input     string
+		input2    string
+		wantLower string
+		wantUpper string
+		wantErr   error
+	}{
+		{
+			desc:      "valid mix of all valid upper and lowercase extensions",
+			input:     "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ" + "µßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ",
+			wantLower: defaultLowercase + "µßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ",
+			wantUpper: defaultUppercase + "ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ",
+			wantErr:   nil,
+		},
+		{
+			desc:      "input with duplicates",
+			input:     "ÀÀ",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errDuplicates,
+		},
+		{
+			desc:      "non Latin1 input",
+			input:     "ÀÁÂ您好",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errNotLatin1,
+		},
+		{
+			desc:      "input with whitespace",
+			input:     "À Á",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errWhitespace,
+		},
+		{
+			desc:      "uppercase already exists",
+			input:     "ÀD",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errAlreadyExist,
+		},
+		{
+			desc:      "lowercase already exists",
+			input:     "ñc",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errAlreadyExist,
+		},
+		{
+			desc:      "non-letter input",
+			input:     "ñ9",
+			wantLower: defaultLowercase,
+			wantUpper: defaultUppercase,
+			wantErr:   errNotLetter,
+		},
+		{
+			desc:      "consecutive extends",
+			input:     "ñ",
+			input2:    "ß",
+			wantLower: defaultLowercase + "ñß",
+			wantUpper: defaultUppercase,
+			wantErr:   nil,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			err := cf.Extend(tt.input)
+
+			if tt.input2 != "" {
+				err = cf.Extend(tt.input2)
+			}
+
+			So(cf.format, ShouldResemble, defaultFormat)
+			So(cf.upper, ShouldResemble, tt.wantUpper)
+			So(cf.lower, ShouldResemble, tt.wantLower)
+			So(cf.custom, ShouldResemble, "")
+			So(cf.num, ShouldResemble, defaultNumbers)
+			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}

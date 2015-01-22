@@ -19,14 +19,14 @@ const (
 )
 
 var (
-	errDuplicates        = errors.New("can't include duplicates")
-	errWhitespace        = errors.New("can't include whitespace")
-	errAlreadyExist      = errors.New("can't extend with characters that already exist")
-	errNotUpper          = errors.New("not uppercase letters")
-	errNotLower          = errors.New("not lower letters")
-	errInvalidFormat     = errors.New("invalid format character")
-	errNotLetterOrNumber = errors.New("not a letter or a number")
-	errNotLatin1         = errors.New("can only extend with Latin1 letters and digits")
+	errDuplicates    = errors.New("can't include duplicates")
+	errWhitespace    = errors.New("can't include whitespace")
+	errAlreadyExist  = errors.New("can't extend with characters that already exist")
+	errNotUpper      = errors.New("not uppercase letters")
+	errNotLower      = errors.New("not lower letters")
+	errInvalidFormat = errors.New("invalid format character")
+	errNotLetter     = errors.New("not a letter")
+	errNotLatin1     = errors.New("can only extend with Latin1 letters and digits")
 )
 
 type CodeFactory struct {
@@ -67,7 +67,7 @@ func (c *CodeFactory) Exclude(s string) error {
 		case unicode.IsUpper(v): // upper
 			c.upper = strings.Replace(c.upper, string(v), "", 1)
 		default:
-			return errNotLetterOrNumber
+			return errNotLetter
 		}
 	}
 	return nil
@@ -94,7 +94,6 @@ func (c *CodeFactory) SetFormat(s string) error {
 				return errInvalidFormat
 			}
 		}
-
 	}
 	c.format = s
 	return nil
@@ -109,30 +108,31 @@ func (c *CodeFactory) Extend(s string) error {
 		return errDuplicates
 	}
 
+	currentUpper := c.upper
+	currentLower := c.lower
+
 	for _, v := range s {
 
 		switch {
 		// lowercase
 		case unicode.IsLower(v):
 			if strings.Contains(c.lower, string(v)) {
-				return errDuplicates
+				c.lower = currentLower
+				return errAlreadyExist
 			}
 			c.lower += string(v)
 
 		case unicode.IsUpper(v):
 			if strings.Contains(c.upper, string(v)) {
-				return errDuplicates
+				c.upper = currentUpper
+				return errAlreadyExist
 			}
 			c.upper += string(v)
 
-		case unicode.IsDigit(v):
-			if strings.Contains(c.num, string(v)) {
-				return errDuplicates
-			}
-			c.num += string(v)
-
 		default:
-			return errNotLetterOrNumber
+			c.upper = currentUpper
+			c.lower = currentLower
+			return errNotLetter
 
 		}
 	}
