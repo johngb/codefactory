@@ -20,7 +20,23 @@ func TestNew(t *testing.T) {
 			suffix: "",
 			format: "#aaaa",
 		}
-		cf := New()
+		cf, _ := New()
+
+		So(cf, ShouldResemble, wantCF)
+	})
+
+	Convey("Create new CodeFactory with options", t, func() {
+
+		wantCF := &CodeFactory{
+			num:    "0123456789",
+			lower:  "defghijklmnopqrstuvwxyz",
+			upper:  "DEFGHIJKLMNOPQRSTUVWXYZ",
+			custom: "",
+			prefix: "",
+			suffix: "",
+			format: "#aaaa",
+		}
+		cf, _ := New(codefactory.Exclude("abcABC"))
 
 		So(cf, ShouldResemble, wantCF)
 	})
@@ -33,7 +49,7 @@ func TestReadable(t *testing.T) {
 		wantCF := &CodeFactory{
 			num:    "0123456789",
 			lower:  "abcdefghijkmnopqrstuvwxyz",
-			upper:  "ABCDEFGHJKLMNPQRSTUVWXYZ",
+			upper:  "",
 			custom: "",
 			prefix: "",
 			suffix: "",
@@ -91,7 +107,7 @@ func TestExclude(t *testing.T) {
 	for i, tt := range testCases {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
-			cf := New()
+			cf, _ := New()
 			err := cf.Exclude(tt.input)
 
 			So(cf.num, ShouldResemble, tt.wantNum)
@@ -145,7 +161,7 @@ func TestSetCustom(t *testing.T) {
 	for i, tt := range testCases {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
-			cf := New()
+			cf, _ := New()
 			err := cf.SetCustom(tt.input)
 
 			if tt.input2 != "" {
@@ -211,7 +227,7 @@ func TestSetFormat(t *testing.T) {
 	for i, tt := range testCases {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
-			cf := New()
+			cf, _ := New()
 			err := cf.SetFormat(tt.input)
 
 			if tt.input2 != "" {
@@ -299,7 +315,7 @@ func TestExtendLetters(t *testing.T) {
 	for i, tt := range testCases {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
-			cf := New()
+			cf, _ := New()
 			err := cf.ExtendLetters(tt.input)
 
 			if tt.input2 != "" {
@@ -372,7 +388,7 @@ func TestMaxCodes(t *testing.T) {
 	for i, tt := range testCases {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
-			cf := New()
+			cf, _ := New()
 			cf.SetFormat(tt.format)
 
 			So(cf.MaxCodes(), ShouldEqual, tt.wantNumber)
@@ -384,7 +400,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '#xxxx'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("#xxxx")
 
 		res, err := cf.Generate(1)
@@ -399,7 +415,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '# d'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("# d")
 
 		res, err := cf.Generate(1)
@@ -410,7 +426,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '$ l'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ l")
 
 		res, err := cf.Generate(1)
@@ -421,7 +437,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '$ w'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ w")
 
 		res, err := cf.Generate(1)
@@ -432,7 +448,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '$ u'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ u")
 
 		res, err := cf.Generate(1)
@@ -443,7 +459,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '$ p'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ p")
 
 		res, err := cf.Generate(1)
@@ -454,7 +470,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with '$ a'", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ a")
 
 		res, err := cf.Generate(1)
@@ -465,7 +481,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with a hopeful code collision", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ dd")
 		numcodes := 20
 
@@ -477,7 +493,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with a too many code collisions", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ dd")
 		numcodes := 90
 
@@ -489,7 +505,7 @@ func TestGenerate(t *testing.T) {
 
 	Convey("testing with a too many codes requested", t, func() {
 
-		cf := New()
+		cf, _ := New()
 		cf.SetFormat("$ d")
 		numcodes := 20
 
