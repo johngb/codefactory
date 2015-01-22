@@ -45,8 +45,8 @@ type CodeFactory struct {
 	suffix string
 }
 
-func New(options ...func(*CodeFactory) error) (*CodeFactory, error) {
-	c := &CodeFactory{
+func New() *CodeFactory {
+	return &CodeFactory{
 		num:    defaultNumbers,
 		lower:  defaultLowercase,
 		upper:  defaultUppercase,
@@ -55,20 +55,10 @@ func New(options ...func(*CodeFactory) error) (*CodeFactory, error) {
 		suffix: defaultSuffix,
 		format: defaultFormat,
 	}
-
-	// run through all the setup options in the varidac
-	for _, option := range options {
-		err := option(c)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return c, nil
 }
 
 func NewReadable() *CodeFactory {
-	c, _ := New() // error is only returned if there are inputs to the options varidac in New()
+	c := New() // error is only returned if there are inputs to the options varidac in New()
 	c.Exclude(defaultUppercase)
 	c.Exclude("l")
 	return c
