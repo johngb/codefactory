@@ -343,9 +343,19 @@ func TestMaxCodes(t *testing.T) {
 			wantNumber: 26 * 26,
 		},
 		{
+			desc:       "format with w's",
+			format:     "# ww",
+			wantNumber: 36 * 36,
+		},
+		{
 			desc:       "format with u's",
 			format:     "# lu",
 			wantNumber: 26 * 26,
+		},
+		{
+			desc:       "format with p's",
+			format:     "# pp",
+			wantNumber: 36 * 36,
 		},
 		{
 			desc:       "format with a's",
@@ -409,6 +419,17 @@ func TestGenerate(t *testing.T) {
 		So(isIncludedIn((cf.lower), rune(res[0][2])), ShouldBeTrue)
 	})
 
+	Convey("testing with '$ w'", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ w")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.lower+cf.num), rune(res[0][2])), ShouldBeTrue)
+	})
+
 	Convey("testing with '$ u'", t, func() {
 
 		cf := New()
@@ -418,6 +439,17 @@ func TestGenerate(t *testing.T) {
 
 		So(err, ShouldBeNil)
 		So(isIncludedIn((cf.upper), rune(res[0][2])), ShouldBeTrue)
+	})
+
+	Convey("testing with '$ p'", t, func() {
+
+		cf := New()
+		cf.SetFormat("$ p")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.upper+cf.num), rune(res[0][2])), ShouldBeTrue)
 	})
 
 	Convey("testing with '$ a'", t, func() {

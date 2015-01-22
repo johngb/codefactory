@@ -15,7 +15,7 @@ const (
 	defaultCustom    = ""
 	defaultPrefix    = ""
 	defaultSuffix    = ""
-	validFormatChars = "xdlua"
+	validFormatChars = "xdlwupa"
 
 	maxRetriesPercent = 10
 	maxRetriesBase    = 4
@@ -151,7 +151,9 @@ func (c *CodeFactory) MaxCodes() int64 {
 	lenX := int64(len(c.num + c.upper + c.lower))
 	lenD := int64(len(c.num))
 	lenL := int64(len(c.lower))
+	lenW := int64(len(c.lower + c.num))
 	lenU := int64(len(c.upper))
+	lenP := int64(len(c.upper + c.num))
 	lenA := int64(len(c.upper + c.lower))
 
 	max := int64(1)
@@ -159,15 +161,19 @@ func (c *CodeFactory) MaxCodes() int64 {
 	for _, v := range c.format {
 		if unicode.IsLower(v) {
 			switch v {
-			case 'x':
+			case 'x': // any
 				max *= lenX
-			case 'd':
+			case 'd': // digits
 				max *= lenD
-			case 'l':
+			case 'l': // lowercase
 				max *= lenL
-			case 'u':
+			case 'w': // lowercase + number
+				max *= lenW
+			case 'u': // uppercase
 				max *= lenU
-			case 'a':
+			case 'p': // uppercase + number
+				max *= lenP
+			case 'a': // lowercase + uppercase
 				max *= lenA
 				// default:
 				// 	panic("Invalid format was passed.  Format code possibly broken.")
@@ -194,14 +200,18 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 	x := c.num + c.upper + c.lower
 	d := c.num
 	l := c.lower
+	w := c.lower + c.num
 	u := c.upper
+	p := c.upper + c.num
 	a := c.upper + c.lower
 
 	// lengths for optimisation
 	lenX := len(x)
 	lenD := len(d)
 	lenL := len(l)
+	lenW := len(w)
 	lenU := len(u)
+	lenP := len(p)
 	lenA := len(a)
 
 	res := []string{}
@@ -234,9 +244,17 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 			case 'l':
 				r += string(l[rand.Intn(lenL)])
 
+			// any lowercase letter or number
+			case 'w':
+				r += string(w[rand.Intn(lenW)])
+
 			// any uppercase letter
 			case 'u':
 				r += string(u[rand.Intn(lenU)])
+
+			// any uppercase letter or number
+			case 'p':
+				r += string(p[rand.Intn(lenP)])
 
 			// any letter (upper or lowercase)
 			case 'a':
