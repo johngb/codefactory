@@ -16,17 +16,22 @@ const (
 	defaultPrefix    = ""
 	defaultSuffix    = ""
 	validFormatChars = "xdlua"
+
+	maxRetriesPercent = 10
+	maxRetriesBase    = 4
+	maxNumCodes       = 100000000
 )
 
 var (
-	errDuplicates    = errors.New("can't include duplicates")
-	errWhitespace    = errors.New("can't include whitespace")
-	errAlreadyExist  = errors.New("can't extend with characters that already exist")
-	errNotUpper      = errors.New("not uppercase letters")
-	errNotLower      = errors.New("not lower letters")
-	errInvalidFormat = errors.New("invalid format character")
-	errNotLetter     = errors.New("not a letter")
-	errNotLatin1     = errors.New("can only extend with Latin1 letters and digits")
+	errDuplicates         = errors.New("can't include duplicates")
+	errWhitespace         = errors.New("can't include whitespace")
+	errAlreadyExist       = errors.New("can't extend with characters that already exist")
+	errNotUpper           = errors.New("not uppercase letters")
+	errNotLower           = errors.New("not lower letters")
+	errInvalidFormat      = errors.New("invalid format character")
+	errNotLetter          = errors.New("not a letter")
+	errNotLatin1          = errors.New("can only extend with Latin1 letters and digits")
+	errMaxRetriesExceeded = errors.New("too many duplicate codes generated. Consider using a longer code")
 )
 
 type CodeFactory struct {
@@ -99,7 +104,7 @@ func (c *CodeFactory) SetFormat(s string) error {
 	return nil
 }
 
-func (c *CodeFactory) Extend(s string) error {
+func (c *CodeFactory) ExtendLetters(s string) error {
 	if !allLatin1(s) {
 		return errNotLatin1
 	} else if hasWhitespace(s) {
@@ -139,24 +144,46 @@ func (c *CodeFactory) Extend(s string) error {
 	return nil
 }
 
-func (c *CodeFactory) lenNum() int {
-	return len(c.num)
+func (c *CodeFactory) maxCodes() int64 {
+
+	// lengths for optimisation
+	lenX := int64(len(c.num + c.upper + c.lower))
+	lenD := int64(len(c.num))
+	lenL := int64(len(c.lower))
+	lenU := int64(len(c.upper))
+	lenA := int64(len(c.upper + c.lower))
+
+	max := int64(1)
+
+	for _, v := range c.format {
+		if unicode.IsLower(v) {
+			switch v {
+			case 'x':
+				max *= lenX
+			case 'd':
+				max *= lenD
+			case 'l':
+				max *= lenL
+			case 'u':
+				max *= lenU
+			case 'a':
+				max *= lenA
+			default:
+				panic("Invalid format was passed.  Format code possibly broken.")
+			}
+		}
+		if max > maxNumCodes*10 { // ten times the max number of codes to be sure that we can easily generate the given number
+			return -1
+		}
+	}
+	if max == 1 {
+		return 0
+	}
+	return max
+
 }
 
-func (c *CodeFactory) lenUpper() int {
-	return len(c.upper)
-}
-
-func (c *CodeFactory) lenLower() int {
-	return len(c.lower)
-}
-
-func (c *CodeFactory) lenLetter() int {
-	total := len(c.lower) + len(c.upper)
-	return total
-}
-
-func (c *CodeFactory) MakeSingle() string {
+func (c *CodeFactory) Generate(num int) ([]string, error) {
 
 	// strings to build codes from
 	x := c.num + c.upper + c.lower
@@ -172,47 +199,75 @@ func (c *CodeFactory) MakeSingle() string {
 	lenU := len(u)
 	lenA := len(a)
 
-	// result string always starts with a prefix
-	r := c.prefix
+	res := []string{}
+	retries := 0
+	maxRetries := (num * maxRetriesPercent / 100) + maxRetriesBase
 
-	for _, v := range c.format {
-		// formatting symbol
-		if !unicode.IsLetter(v) {
-			r += string(v)
+	for i := 1; i <= num; i++ {
+
+		// result string always starts with a prefix
+		r := c.prefix
+
+		for _, v := range c.format {
+			// formatting symbol
+			if !unicode.IsLetter(v) {
+				r += string(v)
+				continue
+			}
+			// is code character
+			switch v {
+
+			// any character in sets
+			case 'x':
+				r += string(x[rand.Intn(lenX)])
+
+			// any number digit
+			case 'd':
+				r += string(d[rand.Intn(lenD)])
+
+			// any lowercase letter
+			case 'l':
+				r += string(l[rand.Intn(lenL)])
+
+			// any uppercase letter
+			case 'u':
+				r += string(u[rand.Intn(lenU)])
+
+			// any letter (upper or lowercase)
+			case 'a':
+				r += string(a[rand.Intn(lenA)])
+
+			default:
+				panic("John broke the code! Format should not have passed validation")
+				return []string{}, errInvalidFormat
+			}
+
+		}
+		r += c.suffix
+
+		// chcek if r is in res
+		if exist := isInSlice(res, r); exist {
+			i-- // generate a new code
+			retries++
+			if retries > maxRetries {
+				return []string{}, errMaxRetriesExceeded
+			}
+
 			continue
 		}
-		// is code character
-		switch v {
 
-		// any character in sets
-		case 'x':
-			r += string(x[rand.Intn(lenX)])
-
-		// any number digit
-		case 'd':
-			r += string(d[rand.Intn(lenD)])
-
-		// any lowercase letter
-		case 'l':
-			r += string(l[rand.Intn(lenL)])
-
-		// any uppercase letter
-		case 'u':
-			r += string(u[rand.Intn(lenU)])
-
-		// any letter (upper or lowercase)
-		case 'a':
-			r += string(a[rand.Intn(lenA)])
-
-		default:
-			panic("John broke the code!")
-		}
-
+		res = append(res, r)
 	}
+	return res, nil
+}
 
-	r += c.suffix
-
-	return r
+func isInSlice(s []string, r string) bool {
+	for _, v := range s {
+		if r == v {
+			return true
+		}
+	}
+	return false
 }
 
 func hasWhitespace(s string) bool {
@@ -222,24 +277,6 @@ func hasWhitespace(s string) bool {
 		}
 	}
 	return false
-}
-
-func allUpper(s string) bool {
-	for _, v := range s {
-		if !unicode.IsUpper(v) {
-			return false
-		}
-	}
-	return true
-}
-
-func allLower(s string) bool {
-	for _, v := range s {
-		if !unicode.IsLower(v) {
-			return false
-		}
-	}
-	return true
 }
 
 func hasDuplicates(s string) bool {

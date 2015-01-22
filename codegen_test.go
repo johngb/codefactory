@@ -228,7 +228,7 @@ func TestSetFormat(t *testing.T) {
 	}
 }
 
-func TestExtend(t *testing.T) {
+func TestExtendLetters(t *testing.T) {
 	var testCases = []struct {
 		desc      string
 		input     string
@@ -300,10 +300,10 @@ func TestExtend(t *testing.T) {
 		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
 
 			cf := New()
-			err := cf.Extend(tt.input)
+			err := cf.ExtendLetters(tt.input)
 
 			if tt.input2 != "" {
-				err = cf.Extend(tt.input2)
+				err = cf.ExtendLetters(tt.input2)
 			}
 
 			So(cf.format, ShouldResemble, defaultFormat)
@@ -312,6 +312,60 @@ func TestExtend(t *testing.T) {
 			So(cf.custom, ShouldResemble, "")
 			So(cf.num, ShouldResemble, defaultNumbers)
 			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}
+
+func TestMaxCodes(t *testing.T) {
+	var testCases = []struct {
+		desc       string
+		format     string
+		wantNumber int64
+	}{
+		{
+			desc:       "empty format",
+			format:     "# $",
+			wantNumber: 0,
+		},
+		{
+			desc:       "format with d's",
+			format:     "# dd",
+			wantNumber: 10 * 10,
+		},
+		{
+			desc:       "format with x's",
+			format:     "# dx",
+			wantNumber: 10 * (26 + 26 + 10),
+		},
+		{
+			desc:       "format with l's",
+			format:     "# ll",
+			wantNumber: 26 * 26,
+		},
+		{
+			desc:       "format with u's",
+			format:     "# lu",
+			wantNumber: 26 * 26,
+		},
+		{
+			desc:       "format with a's",
+			format:     "# da",
+			wantNumber: 10 * (26 + 26),
+		},
+		{
+			desc:       "really high code count",
+			format:     "xxxxxxxxxxx",
+			wantNumber: -1,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			cf.SetFormat(tt.format)
+
+			So(cf.maxCodes(), ShouldEqual, tt.wantNumber)
 		})
 	}
 }
