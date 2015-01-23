@@ -15,11 +15,11 @@ const (
 	defaultCustom    = ""
 	defaultPrefix    = ""
 	defaultSuffix    = ""
-	validFormatChars = "xdlwupa"
+	validFormatChars = "xdlwupac"
 
 	maxRetriesPercent = 10
 	maxRetriesBase    = 4
-	maxNumCodes       = 100000000
+	maxNumCodes       = 1E6
 )
 
 var (
@@ -33,8 +33,12 @@ var (
 	errNotLatin1          = errors.New("can only extend with Latin1 letters and digits")
 	errMaxRetriesExceeded = errors.New("too many duplicate codes generated. Consider using a longer code")
 	errTooManyCodes       = errors.New("too many codes to generate with given settings")
+	errLeadingWhitespace  = errors.New("a prefix may not have leading whitespace")
+	errTrailingWhitespace = errors.New("a suffix may not have trailing whitespace")
+	errNoCharacters       = errors.New("no characters can be generated with an empty set")
 )
 
+// CodeFactory is the type to hold all the config settings to generate codes.
 type CodeFactory struct {
 	num    string
 	lower  string
@@ -45,6 +49,7 @@ type CodeFactory struct {
 	suffix string
 }
 
+// New generates a new default CodeFactory.
 func New() *CodeFactory {
 	return &CodeFactory{
 		num:    defaultNumbers,
@@ -57,22 +62,28 @@ func New() *CodeFactory {
 	}
 }
 
+// NewReadable generates a Codefactory with more easily readable default
+// codes.  It excludes all uppercase characters, and removes lowercase letters
+// that are easily confused with numbers.
 func NewReadable() *CodeFactory {
-	c := New() // error is only returned if there are inputs to the options varidac in New()
-	c.Exclude(defaultUppercase)
-	c.Exclude("l")
-	return c
+	cf := New() // error is only returned if there are inputs to the options varidac in New()
+	cf.Exclude(defaultUppercase)
+	cf.Exclude("l")
+	return cf
 }
 
-func (c *CodeFactory) Exclude(s string) error {
+// Exclude excludes all characters in the input string from either the
+// uppercase, lowercase, or numbers sets. It does not affect the prefix,
+// suffix, or custom set.
+func (cf *CodeFactory) Exclude(s string) error {
 	for _, v := range s {
 		switch {
 		case unicode.IsDigit(v):
-			c.num = strings.Replace(c.num, string(v), "", 1)
+			cf.num = strings.Replace(cf.num, string(v), "", 1)
 		case unicode.IsLower(v):
-			c.lower = strings.Replace(c.lower, string(v), "", 1)
+			cf.lower = strings.Replace(cf.lower, string(v), "", 1)
 		case unicode.IsUpper(v): // upper
-			c.upper = strings.Replace(c.upper, string(v), "", 1)
+			cf.upper = strings.Replace(cf.upper, string(v), "", 1)
 		default:
 			return errNotLetter
 		}
@@ -80,17 +91,33 @@ func (c *CodeFactory) Exclude(s string) error {
 	return nil
 }
 
-func (c *CodeFactory) SetCustom(s string) error {
+// SetCustom sets the custom set of characters.
+func (cf *CodeFactory) SetCustom(s string) error {
 	if hasWhitespace(s) {
 		return errWhitespace
 	} else if hasDuplicates(s) {
 		return errDuplicates
 	}
-	c.custom = s
+	cf.custom = s
 	return nil
 }
 
-func (c *CodeFactory) SetFormat(s string) error {
+// SetFormat sets the format of the codes to be generated.
+//
+//  x = any number, uppercase, or lowercase letter
+//  d = any number
+//  l = any lowercase letter
+//  w = any lowercase letter or number
+//  u = any uppercase letter
+//  p = any uppercase letter or number
+//  a = any uppercase or lowercase letter
+//  c = any character in the custom set
+//
+// Other than the characters given, the format string may include symbols,
+// spaces, and punctuation.
+//
+// If letters are needed, they should be set in the prefix or suffix.
+func (cf *CodeFactory) SetFormat(s string) error {
 	for _, v := range s {
 		// if not punctuation, symbol, or space
 		if !unicode.IsPunct(v) && !unicode.IsSymbol(v) && v != ' ' && !unicode.IsLetter(v) {
@@ -102,11 +129,15 @@ func (c *CodeFactory) SetFormat(s string) error {
 			}
 		}
 	}
-	c.format = s
+	cf.format = s
 	return nil
 }
 
-func (c *CodeFactory) ExtendLetters(s string) error {
+// ExtendLetters allows the uppercase and lowercase letter to be extended with
+// letters that are part of the Latin1 set of letters.  This allows the
+// addition of common letters from Latin script based character sets such as
+// German, Spanish, Hungarian, and Norwegian.
+func (cf *CodeFactory) ExtendLetters(s string) error {
 	if !allLatin1(s) {
 		return errNotLatin1
 	} else if hasWhitespace(s) {
@@ -115,30 +146,30 @@ func (c *CodeFactory) ExtendLetters(s string) error {
 		return errDuplicates
 	}
 
-	currentUpper := c.upper
-	currentLower := c.lower
+	currentUpper := cf.upper
+	currentLower := cf.lower
 
 	for _, v := range s {
 
 		switch {
 		// lowercase
 		case unicode.IsLower(v):
-			if strings.Contains(c.lower, string(v)) {
-				c.lower = currentLower
+			if strings.Contains(cf.lower, string(v)) {
+				cf.lower = currentLower
 				return errAlreadyExist
 			}
-			c.lower += string(v)
+			cf.lower += string(v)
 
 		case unicode.IsUpper(v):
-			if strings.Contains(c.upper, string(v)) {
-				c.upper = currentUpper
+			if strings.Contains(cf.upper, string(v)) {
+				cf.upper = currentUpper
 				return errAlreadyExist
 			}
-			c.upper += string(v)
+			cf.upper += string(v)
 
 		default:
-			c.upper = currentUpper
-			c.lower = currentLower
+			cf.upper = currentUpper
+			cf.lower = currentLower
 			return errNotLetter
 
 		}
@@ -146,20 +177,73 @@ func (c *CodeFactory) ExtendLetters(s string) error {
 	return nil
 }
 
-func (c *CodeFactory) MaxCodes() int64 {
+// SetPrefix allows any UTF-8 prefix to be set before the code.  However, it
+// doesn't allow any leading whitespace.
+//
+// It's possible to use this go generate codes such as:
+//  红 88
+//  ரெட் 88
+//  สีแดง 88
+func (cf *CodeFactory) SetPrefix(s string) error {
+
+	// if the prefix is being cleared
+	if len(s) == 0 {
+		cf.prefix = ""
+		return nil
+	}
+
+	// else check that there is no leading whitespace
+	if unicode.IsSpace(rune(s[0])) {
+		return errLeadingWhitespace
+	}
+	cf.prefix = s
+	return nil
+}
+
+// SetSuffix allows any UTF-8 suffix to be set after the prefix and code.
+// However, it doesn't allow any trailing whitespace.
+//
+// It's possible to use this go generate codes such as:
+//  abc 红
+//  abc ரெட்
+//  abc สีแดง
+func (cf *CodeFactory) SetSuffix(s string) error {
+
+	// if the suffix is being cleared
+	if len(s) == 0 {
+		cf.suffix = ""
+		return nil
+	}
+
+	// else check that there is no trailing whitespace
+	if unicode.IsSpace(rune(s[len(s)-1])) {
+		return errTrailingWhitespace
+	}
+	cf.suffix = s
+	return nil
+}
+
+// MaxCodes returns the maximum number of codes that could theoretically be
+// generated with the current CodeFactory settings.
+//
+// In general it will not be possible to generate this full set using
+// codefactory as this would cause too many collisions, and require different
+// logic to complete.
+func (cf *CodeFactory) MaxCodes() int64 {
 
 	// lengths for optimisation
-	lenX := int64(len(c.num + c.upper + c.lower))
-	lenD := int64(len(c.num))
-	lenL := int64(len(c.lower))
-	lenW := int64(len(c.lower + c.num))
-	lenU := int64(len(c.upper))
-	lenP := int64(len(c.upper + c.num))
-	lenA := int64(len(c.upper + c.lower))
+	lenX := int64(len(cf.num + cf.upper + cf.lower))
+	lenD := int64(len(cf.num))
+	lenL := int64(len(cf.lower))
+	lenW := int64(len(cf.lower + cf.num))
+	lenU := int64(len(cf.upper))
+	lenP := int64(len(cf.upper + cf.num))
+	lenA := int64(len(cf.upper + cf.lower))
+	lenC := int64(len(cf.custom))
 
 	max := int64(1)
 
-	for _, v := range c.format {
+	for _, v := range cf.format {
 		if unicode.IsLower(v) {
 			switch v {
 			case 'x': // any
@@ -176,6 +260,8 @@ func (c *CodeFactory) MaxCodes() int64 {
 				max *= lenP
 			case 'a': // lowercase + uppercase
 				max *= lenA
+			case 'c': // custom
+				max *= lenC
 				// default:
 				// 	panic("Invalid format was passed.  Format code possibly broken.")
 			}
@@ -191,20 +277,29 @@ func (c *CodeFactory) MaxCodes() int64 {
 
 }
 
-func (c *CodeFactory) Generate(num int) ([]string, error) {
+// Generate generates 'num' codes using the settings given in 'cf', and returns
+// the codes as an unordered slice of strings.  It will return an error if the
+// number of codes is too hight for the given format and character sets in
+// 'cf', or if 'num' is greater than the maximum allowed, which is currently
+// set at 1,000,000 codes.
+func (cf *CodeFactory) Generate(num int) ([]string, error) {
 
-	if int64(num) > c.MaxCodes() {
+	maxCodes := cf.MaxCodes()
+	if maxCodes == 0 {
+		return []string{}, errNoCharacters
+	} else if int64(num) > cf.MaxCodes() {
 		return []string{}, errTooManyCodes
 	}
 
 	// strings to build codes from
-	x := c.num + c.upper + c.lower
-	d := c.num
-	l := c.lower
-	w := c.lower + c.num
-	u := c.upper
-	p := c.upper + c.num
-	a := c.upper + c.lower
+	x := cf.num + cf.upper + cf.lower
+	d := cf.num
+	l := cf.lower
+	w := cf.lower + cf.num
+	u := cf.upper
+	p := cf.upper + cf.num
+	a := cf.upper + cf.lower
+	c := cf.custom
 
 	// lengths for optimisation
 	lenX := len(x)
@@ -214,6 +309,7 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 	lenU := len(u)
 	lenP := len(p)
 	lenA := len(a)
+	lenC := len(c)
 
 	res := []string{}
 	retries := 0
@@ -222,9 +318,9 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 	for i := 1; i <= num; i++ {
 
 		// result string always starts with a prefix
-		r := c.prefix
+		r := cf.prefix
 
-		for _, v := range c.format {
+		for _, v := range cf.format {
 			// formatting symbol
 			if !unicode.IsLetter(v) {
 				r += string(v)
@@ -261,13 +357,17 @@ func (c *CodeFactory) Generate(num int) ([]string, error) {
 			case 'a':
 				r += string(a[rand.Intn(lenA)])
 
+				// any custom character
+			case 'c':
+				r += string(c[rand.Intn(lenC)])
+
 				// default:
 				// 	panic("John broke the code! Format should not have passed validation")
 				// 	return []string{}, errInvalidFormat
 			}
 
 		}
-		r += c.suffix
+		r += cf.suffix
 
 		// check if r is in res
 		if exist := isInSlice(res, r); exist {

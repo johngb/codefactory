@@ -316,6 +316,88 @@ func TestExtendLetters(t *testing.T) {
 	}
 }
 
+func TestSetPrefix(t *testing.T) {
+	var testCases = []struct {
+		desc       string
+		input      string
+		wantPrefix string
+		wantErr    error
+	}{
+		{
+			desc:       "valid prefix",
+			input:      "#Code: ",
+			wantPrefix: "#Code: ",
+			wantErr:    nil,
+		},
+		{
+			desc:       "empty prefix",
+			input:      "",
+			wantPrefix: "",
+			wantErr:    nil,
+		},
+		{
+			desc:       "leading whitespace",
+			input:      " #Code: ",
+			wantPrefix: "pre",
+			wantErr:    errLeadingWhitespace,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			cf.prefix = "pre"
+
+			err := cf.SetPrefix(tt.input)
+
+			So(cf.prefix, ShouldResemble, tt.wantPrefix)
+			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}
+
+func TestSetSuffix(t *testing.T) {
+	var testCases = []struct {
+		desc       string
+		input      string
+		wantSuffix string
+		wantErr    error
+	}{
+		{
+			desc:       "valid suffix",
+			input:      "end|/",
+			wantSuffix: "end|/",
+			wantErr:    nil,
+		},
+		{
+			desc:       "empty suffix",
+			input:      "",
+			wantSuffix: "",
+			wantErr:    nil,
+		},
+		{
+			desc:       "trailing whitespace",
+			input:      "end ",
+			wantSuffix: "suf",
+			wantErr:    errTrailingWhitespace,
+		},
+	}
+
+	for i, tt := range testCases {
+		Convey(fmt.Sprintf("Case # %d: %s", i, tt.desc), t, func() {
+
+			cf := New()
+			cf.suffix = "suf"
+
+			err := cf.SetSuffix(tt.input)
+
+			So(cf.suffix, ShouldResemble, tt.wantSuffix)
+			So(err, ShouldEqual, tt.wantErr)
+		})
+	}
+}
+
 func TestMaxCodes(t *testing.T) {
 	var testCases = []struct {
 		desc       string
@@ -463,6 +545,18 @@ func TestGenerate(t *testing.T) {
 		So(isIncludedIn((cf.upper+cf.lower), rune(res[0][2])), ShouldBeTrue)
 	})
 
+	Convey("testing with '$ c'", t, func() {
+
+		cf := New()
+		cf.SetCustom("BabcdefFghiIlm")
+		cf.SetFormat("$ c")
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldBeNil)
+		So(isIncludedIn((cf.custom), rune(res[0][2])), ShouldBeTrue)
+	})
+
 	Convey("testing with a hopeful code collision", t, func() {
 
 		cf := New()
@@ -499,4 +593,44 @@ func TestGenerate(t *testing.T) {
 		So(len(res), ShouldEqual, 0)
 	})
 
+	Convey("testing with a prefix and a suffix", t, func() {
+
+		cf := New()
+		cf.SetPrefix("Bob: ")
+		cf.SetSuffix(" end|")
+		cf.SetFormat("$ dx")
+		numcodes := 10
+
+		res, err := cf.Generate(numcodes)
+
+		So(err, ShouldEqual, nil)
+		So(len(res), ShouldEqual, numcodes)
+		So(res[0][:5], ShouldEqual, "Bob: ")
+		So(res[0][9:], ShouldEqual, " end|")
+	})
+
+	Convey("testing with empty field that matches format", t, func() {
+
+		cf := New()
+		cf.SetFormat("cx")
+		cf.num = ""
+		cf.lower = ""
+		cf.upper = ""
+		cf.custom = "abcdefghijklmn"
+
+		res, err := cf.Generate(1)
+
+		So(err, ShouldEqual, errNoCharacters)
+		So(res, ShouldResemble, []string{})
+
+	})
+}
+
+func BenchmarkGenerate(b *testing.B) {
+
+	for i := 0; i < b.N; i++ {
+		cf := New()
+		_ = cf.SetFormat("#xxxx")
+		cf.Generate(1E5)
+	}
 }
