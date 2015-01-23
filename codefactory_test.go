@@ -624,31 +624,49 @@ func TestGenerate(t *testing.T) {
 		So(res, ShouldResemble, []string{})
 
 	})
-
-	cf := NewReadable()
-	res, err := cf.Generate(100)
-	if err != nil {
-		fmt.Println("Ooops! Error: ", err)
-	}
-	fmt.Println(res)
 }
 
-const testingnum = 1e5
+// set to prevent compiler optimisation in benchmarks
+var result []string
 
-func BenchmarkGenerate(b *testing.B) {
-
+// Benchmarks with no prefix and no suffix set
+func benchGenerate(n int, b *testing.B) {
+	temp := []string{}
 	for i := 0; i < b.N; i++ {
 		cf := New()
 		_ = cf.SetFormat("#xxxx")
-		cf.Generate(testingnum)
+		temp, _ = cf.Generate(n)
 	}
+	result = temp
 }
 
-func BenchmarkGenerateMap(b *testing.B) {
+func BenchmarkGenerate1E0(b *testing.B) { benchGenerate(1E0, b) }
+func BenchmarkGenerate1E1(b *testing.B) { benchGenerate(1E1, b) }
+func BenchmarkGenerate1E2(b *testing.B) { benchGenerate(1E2, b) }
+func BenchmarkGenerate1E3(b *testing.B) { benchGenerate(1E3, b) }
+func BenchmarkGenerate1E4(b *testing.B) { benchGenerate(1E4, b) }
+func BenchmarkGenerate1E5(b *testing.B) { benchGenerate(1E5, b) }
+func BenchmarkGenerate1E6(b *testing.B) { benchGenerate(1E6, b) }
+func BenchmarkGenerate1E7(b *testing.B) { benchGenerate(1E7, b) }
 
+// Benchmarks with Prefix and Suffix set
+func benchGeneratePS(n int, b *testing.B) {
+	temp := []string{}
 	for i := 0; i < b.N; i++ {
 		cf := New()
 		_ = cf.SetFormat("#xxxx")
-		cf.generateMap(testingnum)
+		_ = cf.SetPrefix("Codes: (")
+		_ = cf.SetSuffix(" )")
+		temp, _ = cf.Generate(n)
 	}
+	result = temp
 }
+
+func BenchmarkGeneratePS1E0(b *testing.B) { benchGeneratePS(1E0, b) }
+func BenchmarkGeneratePS1E1(b *testing.B) { benchGeneratePS(1E1, b) }
+func BenchmarkGeneratePS1E2(b *testing.B) { benchGeneratePS(1E2, b) }
+func BenchmarkGeneratePS1E3(b *testing.B) { benchGeneratePS(1E3, b) }
+func BenchmarkGeneratePS1E4(b *testing.B) { benchGeneratePS(1E4, b) }
+func BenchmarkGeneratePS1E5(b *testing.B) { benchGeneratePS(1E5, b) }
+func BenchmarkGeneratePS1E6(b *testing.B) { benchGeneratePS(1E6, b) }
+func BenchmarkGeneratePS1E7(b *testing.B) { benchGeneratePS(1E7, b) }

@@ -2,7 +2,6 @@ package codefactory
 
 import (
 	"errors"
-	"fmt"
 	"math/rand"
 	"strings"
 	"unicode"
@@ -38,25 +37,32 @@ var (
 	errTrailingWhitespace = errors.New("a suffix may not have trailing whitespace")
 	errNoCharacters       = errors.New("no characters can be generated with an empty set")
 
-	// AllValidUppercase is the set of all valid Latin1 uppercase characters as defined by unicode.
+	// AllValidUppercase is the set of all valid Latin1 uppercase characters as
+	// defined by unicode.
 	AllValidUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ"
 
-	// AllValidLowercase is the set of all valid Latin1 lowercase characters as defined by unicode.
+	// AllValidLowercase is the set of all valid Latin1 lowercase characters as
+	// defined by unicode.
 	AllValidLowercase = "abcdefghijklmnopqrstuvwxyzµßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ"
 
-	// AllValidSymbols is the set of all valid Latin1 symbols as defined by unicode.
+	// AllValidSymbols is the set of all valid Latin1 symbols as defined by
+	// unicode.
 	AllValidSymbols = "$+<=>^`|~¢£¤¥¦¨©¬®¯°±´¸×÷"
 
-	// AllValidPunct is the set of all valid Latin1 punctuation as defined by unicode.
+	// AllValidPunct is the set of all valid Latin1 punctuation as defined by
+	// unicode.
 	AllValidPunct = "!\"#%&'()*,-./:;?@[\\]_{}¡§«¶·»¿"
 
-	// AllValidDigits is the set of all valid Latin1 digits as defined by unicode.
+	// AllValidDigits is the set of all valid Latin1 digits as defined by
+	// unicode.
 	AllValidDigits = "0123456789"
 
-	// AllValidNumbers is the set of all valid Latin1 numbers as defined by unicode.
+	// AllValidNumbers is the set of all valid Latin1 numbers as defined by
+	// unicode.
 	AllValidNumbers = "0123456789²³¹¼½¾"
 
-	// AllValid is the set of all valid Latin1 printable characters as defined by unicode.
+	// AllValid is the set of all valid Latin1 printable characters as defined
+	// by unicode.
 	AllValid = AllValidUppercase + AllValidLowercase + AllValidSymbols + AllValidPunct + AllValidNumbers
 )
 
@@ -88,7 +94,7 @@ func New() *CodeFactory {
 // codes.  It excludes all uppercase characters, and removes lowercase letters
 // that are easily confused with numbers.
 func NewReadable() *CodeFactory {
-	cf := New() // error is only returned if there are inputs to the options varidac in New()
+	cf := New()
 	cf.Exclude(defaultUppercase)
 	cf.Exclude("l1")
 	return cf
@@ -124,17 +130,19 @@ func (cf *CodeFactory) SetCustom(s string) error {
 	return nil
 }
 
-// SetFormat sets the format of the codes to be generated.
+// SetFormat sets the format of the codes to be generated with reference to the
+// sets in the CodeFactory.  The valid format codes are:
 //
-//  x = any number, uppercase, or lowercase letter
-//  d = any number
-//  l = any lowercase letter
-//  w = any lowercase letter or number
-//  u = any uppercase letter
-//  p = any uppercase letter or number
-//  a = any uppercase or lowercase letter
-//  c = any character in the custom set
-//
+//  - x = any number, uppercase, or lowercase letter
+//  - d = any number
+//  - l = any lowercase letter
+//  - w = any lowercase letter or number
+//  - u = any uppercase letter
+//  - p = any uppercase letter or number
+//  - a = any uppercase or lowercase letter
+//  - c = any character in the custom set
+//  - any punctuation, symbol, or whitespace, which will simply be printed in
+//  the final code
 // Other than the characters given, the format string may include symbols,
 // spaces, and punctuation.
 //
@@ -287,8 +295,6 @@ func (cf *CodeFactory) MaxCodes() int64 {
 				max *= lenA
 			case 'c': // custom
 				max *= lenC
-				// default:
-				// 	panic("Invalid format was passed.  Format code possibly broken.")
 			}
 		}
 		// limit the answer to maxNumCodes to prevent integer overflow issues
@@ -303,11 +309,11 @@ func (cf *CodeFactory) MaxCodes() int64 {
 
 }
 
-// Generate generates 'num' codes using the settings given in 'cf', and returns
+// Generate generates `num` codes using the settings given in `cf`, and returns
 // the codes as an unordered slice of strings.
 //
 // It will return an error if the number of codes is too hight for the given
-// format and character sets in 'cf', or if 'num' is greater than the maximum
+// format and character sets in `cf`, or if `num` is greater than the maximum
 // allowed, which is currently set at 10,000,000 codes.
 func (cf *CodeFactory) Generate(num int) ([]string, error) {
 
@@ -319,7 +325,7 @@ func (cf *CodeFactory) Generate(num int) ([]string, error) {
 
 	// convert map to string slice
 	res := []string{}
-	for k, _ := range m {
+	for k := range m {
 		res = append(res, k)
 	}
 	return res, nil
@@ -332,7 +338,6 @@ func (cf *CodeFactory) generateMap(num int) (map[string]bool, error) {
 	if maxCodes == 0 {
 		return res, errNoCharacters
 	} else if int64(num) > cf.MaxCodes() {
-		fmt.Println("Maxcodes: ", maxCodes)
 		return res, errTooManyCodes
 	}
 
@@ -404,10 +409,6 @@ func (cf *CodeFactory) generateMap(num int) (map[string]bool, error) {
 				// any custom character
 			case 'c':
 				r += string(c[rand.Intn(lenC)])
-
-				// default:
-				// 	panic("John broke the code! Format should not have passed validation")
-				// 	return []string{}, errInvalidFormat
 			}
 
 		}
