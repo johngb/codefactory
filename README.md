@@ -118,7 +118,7 @@ The code has 100% test coverage, but is fairly new, so use it in production with
 
 ## Contribution
 
-Contributions welcome! Please fork the repository and open a pull request with your changes.
+Contributions welcome! Please fork the repository and open a pull request with your changes.  See the [guidelines for contributing](CONTRIBUTING.md) for a more detailed guide.
 
 You are also welcome to open an issue if there's something you feel can be improved or you have a question.
 
