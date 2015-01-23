@@ -1,5 +1,4 @@
 [![GoDoc](https://godoc.org/github.com/johngb/codefactory?status.svg)](https://godoc.org/github.com/johngb/codefactory)
-
 [![wercker status](https://app.wercker.com/status/7c9afaa69f1c7efa53dddc876bbdc842/s "wercker status")](https://app.wercker.com/project/bykey/7c9afaa69f1c7efa53dddc876bbdc842)
 
 # codefactory for Go
