@@ -2,6 +2,7 @@ package codefactory
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 	"unicode"
@@ -11,7 +12,7 @@ const (
 	defaultNumbers   = "0123456789"
 	defaultLowercase = "abcdefghijklmnopqrstuvwxyz"
 	defaultUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	defaultFormat    = "#aaaa"
+	defaultFormat    = "#xxxx"
 	defaultCustom    = ""
 	defaultPrefix    = ""
 	defaultSuffix    = ""
@@ -19,7 +20,7 @@ const (
 
 	maxRetriesPercent = 10
 	maxRetriesBase    = 4
-	maxNumCodes       = 1E6
+	maxNumCodes       = 1E7
 )
 
 var (
@@ -36,6 +37,27 @@ var (
 	errLeadingWhitespace  = errors.New("a prefix may not have leading whitespace")
 	errTrailingWhitespace = errors.New("a suffix may not have trailing whitespace")
 	errNoCharacters       = errors.New("no characters can be generated with an empty set")
+
+	// AllValidUppercase is the set of all valid Latin1 uppercase characters as defined by unicode.
+	AllValidUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ"
+
+	// AllValidLowercase is the set of all valid Latin1 lowercase characters as defined by unicode.
+	AllValidLowercase = "abcdefghijklmnopqrstuvwxyzµßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ"
+
+	// AllValidSymbols is the set of all valid Latin1 symbols as defined by unicode.
+	AllValidSymbols = "$+<=>^`|~¢£¤¥¦¨©¬®¯°±´¸×÷"
+
+	// AllValidPunct is the set of all valid Latin1 punctuation as defined by unicode.
+	AllValidPunct = "!\"#%&'()*,-./:;?@[\\]_{}¡§«¶·»¿"
+
+	// AllValidDigits is the set of all valid Latin1 digits as defined by unicode.
+	AllValidDigits = "0123456789"
+
+	// AllValidNumbers is the set of all valid Latin1 numbers as defined by unicode.
+	AllValidNumbers = "0123456789²³¹¼½¾"
+
+	// AllValid is the set of all valid Latin1 printable characters as defined by unicode.
+	AllValid = AllValidUppercase + AllValidLowercase + AllValidSymbols + AllValidPunct + AllValidNumbers
 )
 
 // CodeFactory is the type to hold all the config settings to generate codes.
@@ -68,7 +90,7 @@ func New() *CodeFactory {
 func NewReadable() *CodeFactory {
 	cf := New() // error is only returned if there are inputs to the options varidac in New()
 	cf.Exclude(defaultUppercase)
-	cf.Exclude("l")
+	cf.Exclude("l1")
 	return cf
 }
 
@@ -134,9 +156,10 @@ func (cf *CodeFactory) SetFormat(s string) error {
 }
 
 // ExtendLetters allows the uppercase and lowercase letter to be extended with
-// letters that are part of the Latin1 set of letters.  This allows the
-// addition of common letters from Latin script based character sets such as
-// German, Spanish, Hungarian, and Norwegian.
+// letters that are part of the Latin1 set of letters.
+//
+//This allows the  addition of common letters from Latin script based character
+//sets such as  German, Spanish, Hungarian, and Norwegian.
 func (cf *CodeFactory) ExtendLetters(s string) error {
 	if !allLatin1(s) {
 		return errNotLatin1
@@ -181,6 +204,7 @@ func (cf *CodeFactory) ExtendLetters(s string) error {
 // doesn't allow any leading whitespace.
 //
 // It's possible to use this go generate codes such as:
+//  red 88
 //  红 88
 //  ரெட் 88
 //  สีแดง 88
@@ -204,6 +228,7 @@ func (cf *CodeFactory) SetPrefix(s string) error {
 // However, it doesn't allow any trailing whitespace.
 //
 // It's possible to use this go generate codes such as:
+//  abc red
 //  abc 红
 //  abc ரெட்
 //  abc สีแดง
@@ -223,7 +248,7 @@ func (cf *CodeFactory) SetSuffix(s string) error {
 	return nil
 }
 
-// MaxCodes returns the maximum number of codes that could theoretically be
+// MaxCodes returns the maximum number of codes that can be
 // generated with the current CodeFactory settings.
 //
 // In general it will not be possible to generate this full set using
@@ -266,8 +291,9 @@ func (cf *CodeFactory) MaxCodes() int64 {
 				// 	panic("Invalid format was passed.  Format code possibly broken.")
 			}
 		}
-		if max > maxNumCodes*10 { // ten times the max number of codes to be sure that we can easily generate the given number
-			return -1
+		// limit the answer to maxNumCodes to prevent integer overflow issues
+		if max > maxNumCodes {
+			return maxNumCodes
 		}
 	}
 	if max == 1 {
@@ -278,17 +304,36 @@ func (cf *CodeFactory) MaxCodes() int64 {
 }
 
 // Generate generates 'num' codes using the settings given in 'cf', and returns
-// the codes as an unordered slice of strings.  It will return an error if the
-// number of codes is too hight for the given format and character sets in
-// 'cf', or if 'num' is greater than the maximum allowed, which is currently
-// set at 1,000,000 codes.
+// the codes as an unordered slice of strings.
+//
+// It will return an error if the number of codes is too hight for the given
+// format and character sets in 'cf', or if 'num' is greater than the maximum
+// allowed, which is currently set at 10,000,000 codes.
 func (cf *CodeFactory) Generate(num int) ([]string, error) {
+
+	// get a map of the codes
+	m, err := cf.generateMap(num)
+	if err != nil {
+		return []string{}, err
+	}
+
+	// convert map to string slice
+	res := []string{}
+	for k, _ := range m {
+		res = append(res, k)
+	}
+	return res, nil
+}
+
+func (cf *CodeFactory) generateMap(num int) (map[string]bool, error) {
+	res := map[string]bool{}
 
 	maxCodes := cf.MaxCodes()
 	if maxCodes == 0 {
-		return []string{}, errNoCharacters
+		return res, errNoCharacters
 	} else if int64(num) > cf.MaxCodes() {
-		return []string{}, errTooManyCodes
+		fmt.Println("Maxcodes: ", maxCodes)
+		return res, errTooManyCodes
 	}
 
 	// strings to build codes from
@@ -311,7 +356,6 @@ func (cf *CodeFactory) Generate(num int) ([]string, error) {
 	lenA := len(a)
 	lenC := len(c)
 
-	res := []string{}
 	retries := 0
 	maxRetries := (num * maxRetriesPercent / 100) + maxRetriesBase
 
@@ -370,28 +414,18 @@ func (cf *CodeFactory) Generate(num int) ([]string, error) {
 		r += cf.suffix
 
 		// check if r is in res
-		if exist := isInSlice(res, r); exist {
+		if res[r] == true {
 			i-- // generate a new code
 			retries++
 			if retries > maxRetries {
-				return []string{}, errMaxRetriesExceeded
+				return map[string]bool{}, errMaxRetriesExceeded
 			}
-
 			continue
 		}
 
-		res = append(res, r)
+		res[r] = true
 	}
 	return res, nil
-}
-
-func isInSlice(s []string, r string) bool {
-	for _, v := range s {
-		if r == v {
-			return true
-		}
-	}
-	return false
 }
 
 func hasWhitespace(s string) bool {

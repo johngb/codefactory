@@ -12,13 +12,13 @@ func TestNew(t *testing.T) {
 	Convey("Create default new CodeFactory", t, func() {
 
 		wantCF := &CodeFactory{
-			num:    "0123456789",
-			lower:  "abcdefghijklmnopqrstuvwxyz",
-			upper:  "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-			custom: "",
-			prefix: "",
-			suffix: "",
-			format: "#aaaa",
+			num:    defaultNumbers,
+			lower:  defaultLowercase,
+			upper:  defaultUppercase,
+			custom: defaultCustom,
+			prefix: defaultPrefix,
+			suffix: defaultSuffix,
+			format: defaultFormat,
 		}
 		cf := New()
 
@@ -31,13 +31,13 @@ func TestReadable(t *testing.T) {
 	Convey("Create readable new CodeFactory", t, func() {
 
 		wantCF := &CodeFactory{
-			num:    "0123456789",
+			num:    "023456789",
 			lower:  "abcdefghijkmnopqrstuvwxyz",
 			upper:  "",
-			custom: "",
-			prefix: "",
-			suffix: "",
-			format: "#aaaa",
+			custom: defaultCustom,
+			prefix: defaultPrefix,
+			suffix: defaultSuffix,
+			format: defaultFormat,
 		}
 		cf := NewReadable()
 
@@ -447,7 +447,7 @@ func TestMaxCodes(t *testing.T) {
 		{
 			desc:       "really high code count",
 			format:     "xxxxxxxxxxx",
-			wantNumber: -1,
+			wantNumber: maxNumCodes,
 		},
 	}
 
@@ -624,13 +624,31 @@ func TestGenerate(t *testing.T) {
 		So(res, ShouldResemble, []string{})
 
 	})
+
+	cf := NewReadable()
+	res, err := cf.Generate(100)
+	if err != nil {
+		fmt.Println("Ooops! Error: ", err)
+	}
+	fmt.Println(res)
 }
+
+const testingnum = 1e5
 
 func BenchmarkGenerate(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		cf := New()
 		_ = cf.SetFormat("#xxxx")
-		cf.Generate(1E5)
+		cf.Generate(testingnum)
+	}
+}
+
+func BenchmarkGenerateMap(b *testing.B) {
+
+	for i := 0; i < b.N; i++ {
+		cf := New()
+		_ = cf.SetFormat("#xxxx")
+		cf.generateMap(testingnum)
 	}
 }
