@@ -1,4 +1,4 @@
-# codefactory
+# codefactory for Go
 codefactory is a Go package designed to efficiently generate unique codes while giving control as to the exact format that the codes should take.
 
 ## Installation
@@ -20,19 +20,19 @@ The output can be extended and controlled by:
 - Any UTF-8 suffix can be set to appear after each code using the `codefactory.SetSuffix` method as long as it doesn't contain trailing whitespace.
 - Any valid printable (excluding whitespace) Latin1 characters can be included in a custom set using the `codefactory.SetCustom` method.
 - The format of the code may be set using the `codefactory.SetFormat` method. The format is interpreted (from the sets controlled with the previous methods)using the following letter codes:
- - x = any number, uppercase, or lowercase letter
- - d = any number
- - l = any lowercase letter
- - w = any lowercase letter or number
- - u = any uppercase letter
- - p = any uppercase letter or number
- - a = any uppercase or lowercase letter
- - c = any custom character
+ - `x` = any number, uppercase, or lowercase letter
+ - `d` = any number
+ - `l` = any lowercase letter
+ - `w` = any lowercase letter or number
+ - `u` = any uppercase letter
+ - `p` = any uppercase letter or number
+ - `a` = any uppercase or lowercase letter
+ - `c` = any custom character
  - any punctuation, symbol, or whitespace will be printed in the final code, which makes it possible to generate codes such as: `(0)31 36-72-13`
 
 Once the `CodeFactory` has been set up, simply call the `codefactory.Generate` method passing in the number of unique codes required.  An error will be returned if it's not practical to generate the number of codes given the format and sets specified, or if it exceeds the maximum number of codes, which is currently set at 10,000,000.
 
-[See GoDoc](http://godoc.org/github.com/johngb/codefactory) for further documentation and examples.
+[See GoDoc](http://godoc.org/github.com/johngb/codefactory) for further documentation.
 
 ## Example
 
@@ -109,3 +109,36 @@ BenchmarkGeneratePS1E6	       1	1704807308 ns/op
 BenchmarkGeneratePS1E7	       1	8581374368 ns/op
 ```
 
+## Testing and stability
+
+The code has 100% test coverage, but is fairly new, so use it in production with caution.
+
+## Contribution
+
+Contributions welcome! Please fork the repository and open a pull request with your changes.
+
+You are also welcome to open an issue if there's something you feel can be improved or you have a question.
+
+## License
+
+The MIT License (MIT)
+
+Copyright (c) 2015 John Beckett
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
